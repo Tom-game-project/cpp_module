@@ -1,12 +1,14 @@
-# CPP MODULE EX00
+# ex01
 CPP=c++
 CPP_FLAG= -Wall -Wextra -Werror -std=c++98
 
-SRC=./megaphone.cpp
+SRC=\
+	Contact.cpp\
+	PhoneBook.cpp
 
 OBJ=$(SRC:.cpp=.o)
 
-NAME=megaphone
+NAME=myawesome
 
 all: $(NAME)
 
