@@ -1,5 +1,7 @@
 #include "Contact.hpp"
+#include <ostream>
 #include <string>
+#include <iostream>
 
 Contact::Contact ():
 	first_name(""),
@@ -51,6 +53,14 @@ std::string Contact::get_show_contact() {
 		+ out_formatter(this->last_name) + "|" \
 		+ out_formatter(this->nickname);
 	return new_s;
+}
+
+void Contact::show_all_info_per_line() {
+	std::cout << "first_name: " << this->first_name << std::endl;
+	std::cout << "last_name: " << this->last_name << std::endl;
+	std::cout << "nickname: " <<  this->nickname << std::endl;
+	std::cout << "phone_number: " << this->phone_number << std::endl;
+	std::cout << "secret: " << this->secret << std::endl;
 }
 
 /*

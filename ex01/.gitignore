@@ -1,3 +1,6 @@
-myawesome
+.cache/
+compile_commands.json
+phonebook
+compiler_test02
 *.o
 

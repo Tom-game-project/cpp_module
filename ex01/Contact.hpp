@@ -16,6 +16,8 @@ public:
 	void set_nickname(std::string nickname);
 	void set_phone_number(std::string phone_number);
 	void set_secret(std::string secret);
+
+	void show_all_info_per_line();
 private:
 	std::string first_name;
 	std::string last_name;
