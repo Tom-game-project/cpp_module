@@ -1,12 +1,11 @@
-# ex00
+# ex01
 CPP=c++
 CPP_FLAG= -Wall -Wextra -Werror -std=c++98
 
 SRC=\
     main.cpp \
-    newZombie.cpp \
     Zombie.cpp \
-    randomChump.cpp \
+    zombieHorde.cpp
 
 
 OBJ=$(SRC:.cpp=.o)
