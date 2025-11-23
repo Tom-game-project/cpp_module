@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
-#ifndef __Zombie_H__
-#define __Zombie_H__
+#ifndef __ZOMBIE_H__
+#define __ZOMBIE_H__
 
 class Zombie {
 public:
