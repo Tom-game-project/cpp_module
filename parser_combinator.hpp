@@ -1,4 +1,4 @@
-#ifndef PARSER_COMBINATOR_HPP
+#ifndef PARSER_COMBINATOR_HPP 
 #define PARSER_COMBINATOR_HPP
 
 #include <cstddef>
@@ -6,8 +6,15 @@
 
 #include <iostream>
 #include <ostream>
+#include <utility>
 #include <vector>
 
+/*
+ * Parserは以下を実装している必要がある
+ * 
+ * - インスタンス化
+ * - ParseResult<Iterator, char> parse(Iterator it, Iterator end);
+ */
 template <typename Iterator, typename ValueType>
 struct ParseResult {
   bool success;
@@ -16,13 +23,6 @@ struct ParseResult {
 
   ParseResult(bool s, ValueType v, Iterator n): success(s), value(v), next(n) {}
 };
-
-/*
- * Parserは以下を実装している必要がある
- * 
- * - インスタンス化
- * - ParseResult<Iterator, char> parse
- */
 
 template <typename Iterator>
 struct CharParser {
@@ -71,6 +71,97 @@ StringParser<Iterator> str(std::string s) {
   return StringParser<Iterator>(s);
 }
 
+template <typename TargetParser, typename PadParser>
+struct PaddedParser {
+  typedef typename TargetParser::value_type value_type;
+  TargetParser target_parser;
+  PadParser pad_parser;
+
+  PaddedParser(const TargetParser& target_parser, const PadParser& pad_parser): target_parser(target_parser), pad_parser(pad_parser) {} 
+
+  template <typename Iterator>
+  ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
+    ParseResult<Iterator, typename PadParser::value_type> res1_pad = this->pad_parser.parse(it, end);
+    if (!res1_pad.success)
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    ParseResult<Iterator, value_type> res_target = this->target_parser.parse(res1_pad.next, end);
+    if (!res_target.success) 
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    ParseResult<Iterator, value_type> res2_pad = this->pad_parser.parse(res_target.next, end);
+    if (!res2_pad.success) 
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    // 本命の値だけを取り出す
+    return ParseResult<Iterator, value_type>(true, res_target.value, res2_pad.next);
+  }
+};
+
+// padのパース結果を無視する
+template <typename TargetParser/*本命*/, typename PadParser/*無視*/>
+struct IgnoreThenParser {
+  typedef typename TargetParser::value_type value_type;
+  TargetParser target_parser;
+  PadParser pad_parser;
+
+  IgnoreThenParser(const TargetParser& target_parser, const PadParser& pad_parser): target_parser(target_parser), pad_parser(pad_parser) {} 
+
+  template <typename Iterator>
+  ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
+    ParseResult<Iterator, typename PadParser::value_type> res1_pad = this->pad_parser.parse(it, end);
+    if (!res1_pad.success)
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    ParseResult<Iterator, value_type> res_target = this->target_parser.parse(res1_pad.next, end);
+    if (!res_target.success) 
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    return ParseResult<Iterator, value_type>(true, res_target.value, res_target.next);
+  }
+};
+
+// padのパース結果を無視する
+template <typename TargetParser/*本命*/, typename PadParser/*無視*/>
+struct ThenIgnoreParser {
+  typedef typename TargetParser::value_type value_type;
+  TargetParser target_parser;
+  PadParser pad_parser;
+
+  ThenIgnoreParser(const TargetParser& target_parser, const PadParser& pad_parser): target_parser(target_parser), pad_parser(pad_parser) {} 
+
+  template <typename Iterator>
+  ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
+    ParseResult<Iterator, value_type> res_target = this->target_parser.parse(it, end);
+    if (!res_target.success) 
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    ParseResult<Iterator, typename PadParser::value_type> res2_pad = this->pad_parser.parse(res_target.next, end);
+    if (!res2_pad.success) 
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    // 本命の値だけを取り出す
+    return ParseResult<Iterator, value_type>(true, res_target.value, res2_pad.next);
+  }
+};
+
+template <typename TargetParser, typename PadParser>
+PaddedParser<TargetParser, PadParser>padded_p(
+  const TargetParser& target_parser,
+  const PadParser& pad_parser
+) {
+  return PaddedParser<TargetParser, PadParser>(target_parser, pad_parser);
+}
+
+template <typename TargetParser, typename PadParser>
+ThenIgnoreParser<TargetParser, PadParser>thenignore_p(
+  const TargetParser& target_parser,
+  const PadParser& pad_parser
+) {
+  return ThenIgnoreParser<TargetParser, PadParser>(target_parser, pad_parser);
+}
+
+template <typename TargetParser, typename PadParser>
+IgnoreThenParser<TargetParser, PadParser>ignorethen_p(
+  const TargetParser& target_parser,
+  const PadParser& pad_parser
+) {
+  return IgnoreThenParser<TargetParser, PadParser>(target_parser, pad_parser);
+}
+
 template <typename Parser1, typename Parser2>
 // where Parser1, Parser2: 
 struct OrParser {
@@ -88,7 +179,6 @@ struct OrParser {
     // ダメならp2を試す
     return p2.parse(it, end);
   }
-
 };
 
 template <typename Parser>
@@ -110,7 +200,7 @@ struct ChoiceParser {
 
 template <typename Parser1, typename Parser2>
 struct ThenParser {
-  typedef typename Parser1::value_type value_type;
+  typedef std::pair<typename Parser1::value_type, typename Parser2::value_type>  value_type;
   Parser1 p1;
   Parser2 p2;
 
@@ -118,18 +208,21 @@ struct ThenParser {
 
   template <typename Iterator>
   ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
-    ParseResult<Iterator, value_type> res1 = p1.parse(it, end);
-    if (res1.success) {
-      ParseResult<Iterator, value_type> res2 = p2.parse(res1.next, end);
-      return res2;
-    }
-    return ParseResult<Iterator, value_type>(false, value_type(), it);
+    ParseResult<Iterator, typename Parser1::value_type> res1 = p1.parse(it, end);
+    if (!res1.success)
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    ParseResult<Iterator, typename Parser2::value_type> res2 = p2.parse(res1.next, end);
+    if (!res2.success)
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    return ParseResult<Iterator, value_type>(true, std::make_pair(res1.value, res2.value), it);
   }
 };
 
 // ManyParserはThen<P, Then<P, Then<P, ...>>>
 // と同じ意味を持つ
 // ただし任意長
+//
+// ０回以上Parserが適用可能
 template <typename Parser>
 struct ManyParser {
   typedef std::vector<typename Parser::value_type> value_type;
@@ -140,7 +233,7 @@ struct ManyParser {
 
   template<typename Iterator>
   ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
-    value_type results;  // = std::vector<typename Parser::value_type>();
+    ManyParser::value_type results;  // = std::vector<typename Parser::value_type>();
     Iterator current = it;
 
     while (current != end) {
@@ -156,7 +249,116 @@ struct ManyParser {
   }
 };
 
-// 演算子オーバーロードで `chumsky` のような流れるAPI（DSL）を作る
+// 一回以上Parserが適用可能
+template <typename Parser>
+struct Many1Parser {
+  typedef std::vector<typename Parser::value_type> value_type;
+  Parser p;
+
+  Many1Parser(const Parser& a): p(a) {}
+
+  template<typename Iterator>
+  ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
+    Many1Parser::value_type results;  // = std::vector<typename Parser::value_type>();
+    Iterator current = it;
+
+    while (current != end) {
+      ParseResult<Iterator, typename Parser::value_type> res = this->p.parse(current, end);
+      if (!res.success)
+        break;
+      if (current == res.next)
+        break;
+      results.push_back(res.value);
+      current = res.next;
+    }
+    if (results.empty())
+      return ParseResult<Iterator, value_type>(false, value_type(), it);
+    return ParseResult<Iterator, value_type>(true, results, current);
+  }
+};
+
+
+template <typename Iterator,typename ValueType>
+class Recursive{
+private:
+  // インターフェイス
+  struct Concept {
+    virtual ParseResult<Iterator, ValueType> parse() const = 0;
+    virtual ~Concept();
+  };
+
+  // インターフェイスを実装する構造体
+  template<typename Parser>
+  struct Model: Concept {
+    Parser p;
+    Model(const Parser& parser): p(parser) {}
+
+    virtual ParseResult<Iterator, ValueType> parse(Iterator it, Iterator end) const {
+      return p.parse(it, end);
+    }
+  };
+
+  // 内部で保持するParserの型にかかわらず外側の提供するinterfaceは決定
+  Concept* ptr;
+public:
+  // 初期化設定だけする
+  // recursiveな定義を作りたい場合は名前だけ先行して欲しい場合があるため
+  Recursive(): ptr(NULL) {}
+
+  template<typename Parser>
+  Recursive(const Parser& parser): ptr(new Model<Parser>(parser)) {}
+
+  // 
+  template<typename Parser>
+  Recursive& operator=(const Parser& parser) {
+    delete ptr;
+    this->ptr = new Model<Parser>(parser);
+    return *this;
+  }
+
+  ~Recursive() { delete ptr; }
+
+  ParseResult<Iterator, ValueType> parse(Iterator it, Iterator end) const {
+    if (!ptr) { 
+      // 直ちに終わらせる
+      return ParseResult<Iterator, ValueType>(false, ValueType(), it);
+    }
+    // インターフェイスが提供する仮想関数越しに内部のパーサーのメソッドにアクセスする
+    return ptr->parse(it, end);
+  }
+};
+
+template <typename ParserT, typename FuncT, typename OutValueT>
+struct MapParser {
+  // 変換後の型を、このパーサーの value_type として公開する
+  typedef OutValueT value_type;
+  
+  ParserT p;
+  FuncT f; // 変換処理を行う関数オブジェクト
+
+  MapParser(const ParserT& parser, FuncT func) : p(parser), f(func) {}
+
+  template <typename Iterator>
+  ParseResult<Iterator, OutValueT> parse(Iterator it, Iterator end) const {
+    // まず中のパーサーを実行
+    ParseResult<Iterator, typename ParserT::value_type> res = p.parse(it, end);
+
+    if (res.success) {
+      OutValueT mapped_value = f(res.value);
+      return ParseResult<Iterator, OutValueT>(true, mapped_value, res.next);
+    }
+    
+    return ParseResult<Iterator, OutValueT>(false, OutValueT(), it);
+  }
+};
+
+// 使いやすくするためのヘルパー関数
+// ※C++98では変換後の型 OutValueT だけは手動で指定する必要があります
+template <typename OutValueT, typename ParserT, typename FuncT>
+MapParser<ParserT, FuncT, OutValueT> map_p(const ParserT& p, FuncT f) {
+    return MapParser<ParserT, FuncT, OutValueT>(p, f);
+}
+
 template <typename P1, typename P2>
 OrParser<P1, P2> operator|(const P1& p1, const P2& p2) {
   return OrParser<P1, P2>(p1, p2);
@@ -173,22 +375,19 @@ ChoiceParser<P> choice(const P (&arr)[N]) {
   return ChoiceParser<P>(ps);
 }
 
+template <typename P>
+ChoiceParser<P> choice(std::vector<P> ps) {
+  return ChoiceParser<P>(ps);
+}
+
 template <typename Parser>
 ManyParser<Parser> many(const Parser& p) {
   return ManyParser<Parser>(p);
 }
 
-// パースが成功した場合にその情報を変換する
-/*
-template <typename Parser, typename FuncT, typename OutValueT>
-struct MapParser {
-  typedef typename Parser::value_type value_type; // 関数への入力となる
-  Parser p;
-
-  MapParser<Parser, FuncT, OutValueT>() {
-
-  }
+template <typename Parser>
+Many1Parser<Parser> many1(const Parser& p) {
+  return Many1Parser<Parser>(p);
 }
-*/
 
 #endif
