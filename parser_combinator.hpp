@@ -87,7 +87,7 @@ struct PaddedParser {
     ParseResult<Iterator, value_type> res_target = this->target_parser.parse(res1_pad.next, end);
     if (!res_target.success) 
       return ParseResult<Iterator, value_type>(false, value_type(), it);
-    ParseResult<Iterator, value_type> res2_pad = this->pad_parser.parse(res_target.next, end);
+    ParseResult<Iterator, typename PadParser::value_type> res2_pad = this->pad_parser.parse(res_target.next, end);
     if (!res2_pad.success) 
       return ParseResult<Iterator, value_type>(false, value_type(), it);
     // 本命の値だけを取り出す
@@ -177,7 +177,9 @@ struct OrParser {
     ParseResult<Iterator, value_type> res1 = p1.parse(it, end);
     if (res1.success) return res1;
     // ダメならp2を試す
-    return p2.parse(it, end);
+
+    ParseResult<Iterator, value_type> res2 = p2.parse(it, end);
+    return res2;
   }
 };
 
@@ -214,7 +216,7 @@ struct ThenParser {
     ParseResult<Iterator, typename Parser2::value_type> res2 = p2.parse(res1.next, end);
     if (!res2.success)
       return ParseResult<Iterator, value_type>(false, value_type(), it);
-    return ParseResult<Iterator, value_type>(true, std::make_pair(res1.value, res2.value), it);
+    return ParseResult<Iterator, value_type>(true, std::make_pair(res1.value, res2.value), res2.next);
   }
 };
 
@@ -277,14 +279,14 @@ struct Many1Parser {
   }
 };
 
-
-template <typename Iterator,typename ValueType>
+template <typename Iterator, typename ValueType>
 class Recursive{
 private:
   // インターフェイス
   struct Concept {
-    virtual ParseResult<Iterator, ValueType> parse() const = 0;
-    virtual ~Concept();
+    virtual ParseResult<Iterator, ValueType> parse(Iterator it, Iterator end) const = 0;
+    virtual Concept* clone() const = 0;
+    virtual ~Concept() {}
   };
 
   // インターフェイスを実装する構造体
@@ -294,7 +296,10 @@ private:
     Model(const Parser& parser): p(parser) {}
 
     virtual ParseResult<Iterator, ValueType> parse(Iterator it, Iterator end) const {
-      return p.parse(it, end);
+      return this->p.parse(it, end);
+    }
+    virtual Concept* clone() const {
+      return new Model<Parser>(this->p);
     }
   };
 
@@ -303,10 +308,25 @@ private:
 public:
   // 初期化設定だけする
   // recursiveな定義を作りたい場合は名前だけ先行して欲しい場合があるため
+  typedef ValueType value_type;
+
   Recursive(): ptr(NULL) {}
 
+  // Recursive<...> block = 右辺の巨大な型;としたときに呼ばれるコンストラクタ
   template<typename Parser>
   Recursive(const Parser& parser): ptr(new Model<Parser>(parser)) {}
+
+
+  // コピーコンストラクタ
+  Recursive(const Recursive& other): ptr(other.ptr? other.ptr->clone(): NULL) {}
+
+  Recursive& operator=(const Recursive& other) {
+    if (this != &other) {
+      delete ptr;
+      ptr = other.ptr ? other.ptr->clone() : NULL;
+    }
+    return *this;
+  }
 
   // 
   template<typename Parser>
@@ -327,6 +347,25 @@ public:
     return ptr->parse(it, end);
   }
 };
+
+template <typename Parser>
+struct RefParser {
+  typedef typename Parser::value_type value_type;
+
+  const Parser *p;
+
+  RefParser(const Parser& p): p(&p) {}
+
+  template<typename Iterator>
+  ParseResult<Iterator, value_type>parse(Iterator it, Iterator end) const {
+    return p->parse(it, end);
+  }
+};
+
+template <typename Parser>
+RefParser<Parser> ref_p(const Parser& p) {
+  return RefParser<Parser>(p);
+}
 
 template <typename ParserT, typename FuncT, typename OutValueT>
 struct MapParser {
