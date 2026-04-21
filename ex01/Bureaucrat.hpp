@@ -10,6 +10,7 @@
 
 #define GradeTooLowExceptionMsg "Error: Bureaucrat grade is too low (must be <= 150)."
 
+class Form;
 class Bureaucrat {
 private:
   int grade;
@@ -38,6 +39,9 @@ public:
   void increment(); 
   // throw error
   void decrement();
+
+  // signForm
+  void signForm(Form& form);
 };
 
 // クラス定義の "外" に記述します
