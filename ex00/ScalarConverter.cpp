@@ -6,22 +6,27 @@
 #include <utility>
 #include <vector>
 
-namespace InputType {
+struct Data {
   enum InputType {
     Char,
     Int,
     Double,
     Float
   };
-}
+  enum Category {
+    Normal,
+    Pseudo
+  };
 
-struct Data {
-  InputType::InputType type;
+  InputType type;
+  Category category;
   std::string value;
 
   Data() {}
-  Data(InputType::InputType t, std::string v):type(t), value(v) {}
+  Data(InputType type, Category category, std::string value):type(type), category(category), value(value) {}
 };
+
+// helper functor
 
 struct VecCharToString {
   std::string operator()(const std::vector<char> v) const {
@@ -30,51 +35,68 @@ struct VecCharToString {
   }
 };
 
+struct NumsPointNumsConcat2 {
+  std::string operator()(const std::pair<std::string, std::string> v) const {
+    return v.first + "." + v.second;
+  }
+};
+
+// === Int Map ===
+
 struct IntToData {
   Data operator()(std::pair<std::string, std::string> input) const {
-    if (input.first == "+") {
-      return Data(InputType::Int, input.second);
-    } else if (input.first == "-") {
-      return Data(InputType::Int, input.first + input.second);
-    } else if (input.first == "") {
-      return Data(InputType::Int, input.second);
-    } else {
-      return Data();
-    }
-    // unreachable
+    return Data(Data::Int, Data::Normal, (input.first == "-"? "-" : "") + input.second);
   }
 };
+
+
+// === Double Map ===
 
 struct DoubleToData {
-  Data operator()(const std::pair<std::string, std::pair<std::string, std::string> >& input) const {
-    if (input.first == "+") {
-      return Data(InputType::Double, input.second.first + "." + input.second.second);
-    } else if (input.first == "-") {
-      return Data(InputType::Double, input.first +  input.second.first + "." + input.second.second);
-    } else if (input.first == "") {
-      return Data(InputType::Double, input.second.first + "." + input.second.second);
-    } else {
-      return Data();
-    }
-    // unreachable
+  Data operator()(const std::pair<std::string, std::string >& input) const {
+    return Data(Data::Double, Data::Normal, (input.first == "-"? "-" : "") + input.second);
   }
 };
+
+struct SpecialDoubleToData {
+  Data operator()(const std::pair<std::string, std::string >& input) const {
+    return Data(Data::Double, Data::Pseudo, (input.first == "-"? "-" : "") + input.second);
+  }
+};
+
+// === Float Map ===
 
 struct FloatToData {
-  Data operator()(const std::pair<std::string, std::pair<std::string, std::string> >& input) const {
-    if (input.first == "+") {
-      return Data(InputType::Float, input.second.first + "." + input.second.second);
-    } else if (input.first == "-") {
-      return Data(InputType::Float, input.first +  input.second.first + "." + input.second.second);
-    } else if (input.first == "") {
-      return Data(InputType::Float, input.second.first + "." + input.second.second);
-    } else {
-      return Data();
-    }
-    // unreachable
+  Data operator()(const std::pair<std::string, std::string >& input) const {
+    return Data(Data::Float, Data::Normal, (input.first == "-"? "-" : "") + input.second);
   }
 };
 
+struct SpecialFloatToData {
+  Data operator()(const std::pair<std::string, std::string >& input) const {
+    return Data(Data::Float, Data::Pseudo, (input.first == "-"? "-" : "") + input.second);
+  }
+};
+
+// === Char Map ===
+
+struct AsciiToData {
+  Data operator()(const std::string& input) const {
+    return Data(Data::Char, Data::Normal, input);
+  }
+};
+
+
+// helper function to generate parser
+
+std::vector<StringParser<std::string::const_iterator> > generate_ascii_parser() {
+  std::vector<StringParser<std::string::const_iterator> > v;
+  for (char c = ' '; c <= '~'; c++) {
+    std::string s(1, c);
+    v.push_back(StringParser<std::string::const_iterator>(s));
+  }
+  return v;
+}
 
 void parsing(std::string& s) {
   typedef std::string::const_iterator Iter;
@@ -85,18 +107,44 @@ void parsing(std::string& s) {
   typedef Many1Parser<CharP> Nums;
 
   typedef MapParser<Nums, VecCharToString, std::string> NumsM; // Nums to String
+
   typedef ThenParser<PlusMinus, NumsM> IntP;
   typedef MapParser<IntP, IntToData, Data> IntM;
 
   typedef ThenParser<ThenIgnoreParser<NumsM, CharParser<Iter> >, NumsM> NumsPointNumsP;
- 
-  typedef ThenParser<PlusMinus, NumsPointNumsP> DoubleP;
+  typedef MapParser<NumsPointNumsP, NumsPointNumsConcat2, std::string> NumsPointNumsM;
+
+  typedef ThenParser<PlusMinus, NumsPointNumsM> DoubleP;
+  typedef ThenParser<PlusMinus, OrParser<StringP, StringP> > SpecialDoubleP;
   typedef MapParser<DoubleP, DoubleToData, Data> DoubleM;
+  typedef MapParser<SpecialDoubleP, SpecialDoubleToData, Data> SpecialDoubleM;
 
   typedef ThenIgnoreParser<DoubleP, CharParser<Iter> > FloatP;
+  typedef ThenIgnoreParser<SpecialDoubleP, CharParser<Iter> > SpecialFloatP;
   typedef MapParser<FloatP, FloatToData, Data> FloatM;
+  typedef MapParser<SpecialFloatP, SpecialFloatToData, Data> SpecialFloatM;
 
-  typedef OrParser<OrParser<FloatM, DoubleM>, IntM> NumberP;
+  typedef ChoiceParser<StringP> AsciiP;
+  typedef MapParser<AsciiP, AsciiToData, Data> AsciiM;
+
+  typedef ThenIgnoreParser<
+    OrParser<
+      FloatM,
+      OrParser<
+        DoubleM,
+        OrParser<
+          SpecialFloatM,
+          OrParser<
+            SpecialDoubleM,
+            OrParser<
+              IntM,
+              AsciiM
+            >
+          >
+        >
+      >
+    >,
+    EofParser<Iter> > NumberP;
 
   // stringやchar
   CharParser<Iter> num_set[] = {
@@ -112,11 +160,13 @@ void parsing(std::string& s) {
     chr<Iter>('9'),
   };
 
+  std::vector<StringParser<Iter> > ascii_set = generate_ascii_parser();
+
   CharP char_p = choice(num_set);
-
   Nums nums_p = many1(char_p);
-
   PlusMinus plus_minus_p = StringP("+") | StringP("-") | StringP("");
+  StringP inf_p = StringP("inf");
+  StringP nan_p = StringP("nan");
 
   // 連続する数字の表記
   NumsM nums_m = map_p<std::string>(nums_p, VecCharToString());
@@ -125,15 +175,26 @@ void parsing(std::string& s) {
   IntM int_m = map_p<Data>(int_p, IntToData());
 
   NumsPointNumsP nums_point_nums = thenignore_p(nums_m, chr<Iter>('.')) & nums_m;
-  
-  DoubleP double_p = plus_minus_p & nums_point_nums; 
+  NumsPointNumsM nums_point_nums_m = map_p<std::string>(nums_point_nums, NumsPointNumsConcat2());
+
+  DoubleP double_p = plus_minus_p & nums_point_nums_m;
   DoubleM double_m = map_p<Data>(double_p, DoubleToData());
+
+  SpecialDoubleP special_double_p = plus_minus_p & (inf_p | nan_p);
+  SpecialDoubleM special_double_m = map_p<Data>(special_double_p, SpecialDoubleToData());
 
   FloatP float_p = thenignore_p(double_p, chr<Iter>('f'));
   FloatM float_m = map_p<Data>(float_p, FloatToData());
 
+  SpecialFloatP special_float_p = thenignore_p(special_double_p, chr<Iter>('f'));
+  SpecialFloatM special_float_m = map_p<Data>(special_float_p, SpecialFloatToData());
 
-  NumberP number_p = float_m | double_m | int_m;
+  AsciiP ascii_p = choice(ascii_set);
+  AsciiM ascii_m = map_p<Data>(ascii_p, AsciiToData());
+
+  NumberP number_p = 
+    thenignore_p(
+        (float_m | (double_m | (special_float_m | (special_double_m | (int_m | ascii_m))))), eof_p<Iter>());
 
   // ここから
   std::string::const_iterator it = s.begin();
@@ -143,16 +204,30 @@ void parsing(std::string& s) {
 
   if (parsed_data.success) {
     switch (parsed_data.value.type) {
-      case InputType::Double:
-        std::cout << "parsed double :" << parsed_data.value.value << std::endl;
+      case Data::Double:
+        switch (parsed_data.value.category) {
+          case Data::Normal:
+            std::cout << "parsed double normal:" << parsed_data.value.value << std::endl;
+            break;
+          case Data::Pseudo:
+            std::cout << "parsed double pseudo:" << parsed_data.value.value << std::endl;
+            break;
+        }
         break;
-      case InputType::Float:
-        std::cout << "parsed float :" << parsed_data.value.value << std::endl;
+      case Data::Float:
+        switch (parsed_data.value.category) {
+          case Data::Normal:
+            std::cout << "parsed float normal:" << parsed_data.value.value << std::endl;
+            break;
+          case Data::Pseudo:
+            std::cout << "parsed float pseudo:" << parsed_data.value.value << std::endl;
+            break;
+        }
         break;
-      case InputType::Int:
+      case Data::Int:
         std::cout << "parsed int :" << parsed_data.value.value << std::endl;
         break;
-      case InputType::Char:
+      case Data::Char:
         std::cout << "parsed char :" << parsed_data.value.value << std::endl;
         break;
     }
