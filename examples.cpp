@@ -121,6 +121,7 @@ int main() {
     typedef MapParser<PaddedWord, VecCharToString, std::string> MapWord;
 
     typedef Recursive<std::string::const_iterator, BraceNode> BraceRecur;
+
     // typedef MapParser<
     //   ThenParser<
     //     MapWord,               // 一単語目
@@ -180,7 +181,7 @@ int main() {
         "  server_name localhost; \n"
         "}\n"
         "hello world;";
-        
+
     std::string::const_iterator it = input.begin();
     std::string::const_iterator end = input.end();
 
