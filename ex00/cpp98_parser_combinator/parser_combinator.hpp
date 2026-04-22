@@ -25,6 +25,21 @@ struct ParseResult {
 };
 
 template <typename Iterator>
+struct EofParser {
+  typedef bool value_type; // 返す値に意味はない
+
+  EofParser() {}
+
+  ParseResult<Iterator, value_type> parse(Iterator it, Iterator end) const {
+    if (it == end) {
+      return ParseResult<Iterator, value_type>(true, true, it);
+    }
+    return ParseResult<Iterator, value_type>(false, false, it);
+  }
+};
+
+
+template <typename Iterator>
 struct CharParser {
   typedef char value_type;
   char target;
@@ -61,6 +76,12 @@ struct StringParser {
 };
 
 // ヘルパー関数（autoがないC++98では、型推論させるためにヘルパー関数が必須）
+
+template <typename Iterator>
+EofParser<Iterator> eof_p() {
+  return EofParser<Iterator>();
+}
+
 template <typename Iterator>
 CharParser<Iterator> chr(char c) {
   return CharParser<Iterator>(c);
