@@ -1,9 +1,6 @@
 .PHONY: all clean fclean re
 
 SRC= \
-	 A.cpp \
-	 B.cpp \
-	 C.cpp \
 	 Base.cpp
 
 OBJ=$(SRC:.cpp=.o)
@@ -14,8 +11,6 @@ NAME=exec
 
 CXX=c++
 CXX_FLAGS= -Wall -Wextra -Werror -Wconversion -std=c++98 -pedantic-errors
-
-
 
 all: $(NAME)
 

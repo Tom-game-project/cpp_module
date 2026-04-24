@@ -254,7 +254,7 @@ void ScalarConverter::convert(std::string& data) {
                 float f_val = static_cast<float>(d_val);
                 std::cout << "float: " << f_val;
                 // 安全な .0 付与（巨大な数値での未定義動作を防ぐ）
-                if (f_val > -threshold && f_val < threshold && f_val == static_cast<int>(f_val)) {
+                if (f_val > -threshold && f_val < threshold && f_val == static_cast<float>(static_cast<int>(f_val))) {
                   std::cout << ".0";
                 }
                 std::cout << "f\n";
@@ -262,7 +262,7 @@ void ScalarConverter::convert(std::string& data) {
 
               // [double の出力]
               std::cout << "double: " << d_val;
-              if (d_val > -threshold && d_val < threshold && d_val == static_cast<int>(d_val)) {
+              if (d_val > -threshold && d_val < threshold && d_val == static_cast<double>(static_cast<int>(d_val))) {
                 std::cout << ".0";
               }
               std::cout << "\n";
@@ -312,7 +312,7 @@ void ScalarConverter::convert(std::string& data) {
 
               // [float の出力]
               std::cout << "float: " << f_val;
-              if (f_val > -threshold && f_val < threshold && f_val == static_cast<int>(f_val)) {
+              if (f_val > -threshold && f_val < threshold && f_val == static_cast<float>(static_cast<int>(f_val))) {
                 std::cout << ".0";
               }
               std::cout << "f\n";
@@ -320,7 +320,7 @@ void ScalarConverter::convert(std::string& data) {
               // [double へのキャスト]
               double d_val = static_cast<double>(f_val);
               std::cout << "double: " << d_val;
-              if (d_val > -threshold && d_val < threshold && d_val == static_cast<int>(d_val)) {
+              if (d_val > -threshold && d_val < threshold && d_val == static_cast<double>(static_cast<int>(d_val))) {
                 std::cout << ".0";
               }
               std::cout << "\n";
@@ -371,7 +371,7 @@ void ScalarConverter::convert(std::string& data) {
           float f_val = static_cast<float>(d_val);
           std::cout << "float: " << f_val;
           // 元が純粋な数字列であっても、floatの精度丸めで小数になる可能性はゼロではないため安全策をとる
-          if (f_val > -threshold && f_val < threshold && f_val == static_cast<int>(f_val)) {
+          if (f_val > -threshold && f_val < threshold && f_val == static_cast<float>(static_cast<int>(f_val))) {
             std::cout << ".0";
           }
           std::cout << "f\n";
