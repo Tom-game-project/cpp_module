@@ -1,7 +1,10 @@
 .PHONY: all clean fclean re
 
 SRC= \
-	 Serializer.cpp
+	 A.cpp \
+	 B.cpp \
+	 C.cpp \
+	 Base.cpp
 
 OBJ=$(SRC:.cpp=.o)
 
@@ -29,4 +32,7 @@ fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
+
+
+
 
