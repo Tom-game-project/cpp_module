@@ -27,16 +27,16 @@ int main() {
   Data data_b;
   data_b.value = "B";
 
-  Whatever::swap<int>(a, b);
+  swap<int>(a, b);
   std::cout << "a: " << a << std::endl;
   std::cout << "b: " << b << std::endl;
 
-  Whatever::swap<Data>(data_a, data_b);
+  swap<Data>(data_a, data_b);
 
   int a_arr[] = {1,2,3};
   int b_arr[] = {3, 2,1};
 
-  Whatever::swap(a_arr, b_arr);
+  swap(a_arr, b_arr);
 
   for (std::size_t i = 0; i < 3; i++) {
     std::cout << "a_arr[" << i << "] :" << a_arr[i] << std::endl;
@@ -45,8 +45,8 @@ int main() {
   std::cout << "data_a: " << data_a.value << std::endl;
   std::cout << "data_b: " << data_b.value << std::endl;
 
-  int min_one = Whatever::min(a, b);
-  int max_one = Whatever::max(a, b);
+  int min_one = min(a, b);
+  int max_one = max(a, b);
 
   std::cout << "min one: " << min_one << std::endl;
   std::cout << "max one: " << max_one << std::endl;
@@ -56,8 +56,8 @@ int main() {
   DataA bb;
   bb.value = 1;
 
-  DataA max_data = Whatever::min(aa, bb);
-  DataA min_data = Whatever::max(aa, bb);
+  DataA max_data = min(aa, bb);
+  DataA min_data = max(aa, bb);
 
   std::cout << "min one: " << max_data.value << std::endl;
   std::cout << "max one: " << min_data.value << std::endl;

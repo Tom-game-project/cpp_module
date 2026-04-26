@@ -1,7 +1,6 @@
 .PHONY: all clean fclean re
 
 SRC= \
-	 iter.cpp
 
 OBJ=$(SRC:.cpp=.o)
 
