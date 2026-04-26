@@ -9,7 +9,7 @@ MAIN=main.cpp
 
 NAME=exec
 
-CXX=clang++
+CXX=c++
 CXX_FLAGS= -Wall -Wextra -Werror -std=c++98 -pedantic-errors -I.
 
 all: $(NAME)
