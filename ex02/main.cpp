@@ -35,7 +35,7 @@ std::cout << "===============================" << std::endl;
 std::list<int> mstack;
 mstack.push_back(5);
 mstack.push_back(17);
-// std::cout << mstack.top() << std::endl;
+std::cout << mstack.back() << std::endl;
 mstack.pop_back();
 std::cout << mstack.size() << std::endl;
 mstack.push_back(3);
@@ -56,3 +56,4 @@ std::stack<int, std::list<int> > s(mstack);
 }
 }
 
+// diff -u --color=always <(sed -n '7,29p' main.cpp) <(sed -n '34,56p' main.cpp)
