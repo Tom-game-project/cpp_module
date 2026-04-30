@@ -25,7 +25,7 @@ public:
 
   template <typename Iterator>
   void addNumber(Iterator begin, Iterator end) {
-    long int distance = std::distance(begin, end);
+    unsigned long distance = static_cast<unsigned long>(std::distance(begin, end));
     
     if (_numbers.size() + distance > _maxSize) {
       throw SpanFullException();

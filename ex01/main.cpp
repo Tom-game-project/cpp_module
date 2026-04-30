@@ -1,11 +1,11 @@
 #include "Span.hpp"
 
+#include <cstddef>
 #include <iostream>
 #include <vector>
-#include <algorithm> // std::random_shuffle 用
+#include <algorithm>
 #include "Span.hpp"
 
-// 1. 大規模かつ結果が予測可能なデータによる正確性・速度テスト
 void test_large_scale_accuracy() {
   std::cout << "--- Large Scale Accuracy Test (10,000 elements) ---" << std::endl;
   
@@ -14,9 +14,9 @@ void test_large_scale_accuracy() {
   std::vector<int> predictable_data;
   
   // 10, 20, 30 ... 100000 という等差数列を生成
-  // これにより、正解が必ず Shortest: 10, Longest: 99990 になるよう制御する
-  for (unsigned int i = 1; i <= amount; ++i) {
-    predictable_data.push_back(i * 10);
+  // 正解は必ず Shortest: 10, Longest: 99990
+  for (std::size_t i = 1; i <= amount; ++i) {
+    predictable_data.push_back(static_cast<int>(i * 10));
   }
   
   // データをシャッフルし、挿入順序を完全にランダムにする
@@ -38,7 +38,6 @@ void test_large_scale_accuracy() {
   std::cout << std::endl;
 }
 
-// 2. イテレータ一括追加時における容量超過（例外）のテスト
 void test_bulk_insert_exception() {
   std::cout << "--- Bulk Insert Exception Test ---" << std::endl;
 
@@ -58,7 +57,6 @@ void test_bulk_insert_exception() {
   std::cout << std::endl;
 }
 
-// 3. サブジェクト(PDF)記載の基本テスト
 void test_subject_example() {
   std::cout << "--- Subject PDF Example Test ---" << std::endl;
   Span sp = Span(5);

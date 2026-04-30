@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <list>
-#include "easyfind.hpp" // 先ほど作成したヘッダファイル
+#include "easyfind.hpp"
 
 // テスト用のヘルパー関数（ベクトル用）
 void test_vector() {
