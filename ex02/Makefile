@@ -1,7 +1,7 @@
 .PHONY: all clean fclean re
 
 SRC= \
-	 ./PmergeMe.cpp
+	 PmergeMe.cpp
 
 OBJ=$(SRC:.cpp=.o)
 
