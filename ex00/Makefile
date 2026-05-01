@@ -12,8 +12,6 @@ NAME=btc
 CXX=c++
 CXX_FLAGS= -Wall -Wextra -Werror -Wconversion -std=c++98 -pedantic-errors
 
-
-
 all: $(NAME)
 
 %.o: %.cpp
