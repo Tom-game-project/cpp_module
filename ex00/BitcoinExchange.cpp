@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 #include <cstdlib>
+#include <iomanip>
+#include <fstream>
 
 // debug
 #include <iostream>
@@ -46,6 +48,13 @@ struct Date {
     return this->year == rhs.year && this->month == rhs.month && this->day == rhs.day;
   }
 };
+
+std::ostream& operator<<(std::ostream& os, const Date& date) {
+    os << date.year << "-"
+       << std::setfill('0') << std::setw(2) << date.month << "-"
+       << std::setfill('0') << std::setw(2) << date.day;
+    return os;
+}
 
 namespace FailedReason {
 enum FailedReason {
@@ -295,11 +304,15 @@ ParseResult<std::string::const_iterator, Result<double, ValueParseError::ValuePa
 }
 
 // errorが起こったときにはfalseを返す
-bool load_csv_data(std::istringstream& user_input, std::map<Date, double>& r_map) {
+bool load_csv_data(std::istringstream& csv_stream, std::map<Date, double>& r_map) {
   std::string line;
   // std::map<Date, double> r_map;
 
-  while (std::getline(user_input, line)) {
+  if (std::getline(csv_stream, line)) {
+    // 一行目は飛ばす
+  }
+
+  while (std::getline(csv_stream, line)) {
 
     if (!line.empty() && line[line.length() - 1] == '\r') {
       line.erase(line.length() - 1);
@@ -371,59 +384,146 @@ bool load_csv_data(std::istringstream& user_input, std::map<Date, double>& r_map
   return true;
 }
 
-#include <sstream>
+
+void show_calc_result(Date& target_date, double rate, double price) {
+  if (price < 0) {
+    std::cerr << "Error: not a positive number" << std::endl;
+  } else if (1000 < price) {
+    // Error: too large a number
+    std::cerr << "Error: too large a number" << std::endl;
+  } else {
+    double r = rate * price;
+    std::cout << target_date << " => " << price << " = " << r << std::endl;
+  }
+}
+
+bool load_user_input_and_show_result(std::istringstream& user_input_stream, std::map<Date, double>& csv_database_map) {
+  std::string line;
+
+  if (std::getline(user_input_stream, line)) {
+    // 一行目は飛ばす
+  }
+
+  while (std::getline(user_input_stream, line)) {
+
+    if (!line.empty() && line[line.length() - 1] == '\r') {
+      line.erase(line.length() - 1);
+    }
+
+    std::istringstream lineStream(line);
+    std::string dateStr, priceStr;
+
+    if (std::getline(lineStream, dateStr, '|')) {
+      std::getline(lineStream, priceStr);
+
+      ParseResult<std::string::const_iterator, Result<Date, FailedReason::FailedReason> > parsed_date = 
+        date_parser(dateStr);
+      ParseResult<std::string::const_iterator, Result<double, ValueParseError::ValueParseError> > parsed_result = 
+        value_parser(priceStr);
+
+      if (parsed_date.success) {
+        switch (parsed_date.value.ty) {
+          case Result<Date, FailedReason::FailedReason>::Ok:
+            {
+              Date target_date = parsed_date.value.value.ok_value;
+
+              if (parsed_result.success) {
+                switch (parsed_result.value.ty) {
+                  case Result<double, ValueParseError::ValueParseError>::Ok:
+                    {
+                      std::map<Date, double>::iterator it = csv_database_map.lower_bound(target_date);
+
+                      // パターンA: ピッタリ同じ日付が見つかった場合
+                      // (itがendではなく、かつ、指しているキーが探している日付と完全に一致する)
+                      if (it != csv_database_map.end() && it->first == target_date) {
+                        double price = it->second;
+                        show_calc_result(target_date, price, parsed_result.value.value.ok_value);
+                      }
+                      // パターンB: 指定された日付が、データベースの一番古い日付よりもさらに過去だった場合
+                      // (lower_boundがmapの先頭を返してきた場合)
+                      else if (it == csv_database_map.begin()) {
+                        std::cerr << "Error: No older date found in database for => " 
+                                    << line << std::endl;
+                      }
+                      // パターンC: 日付がピッタリ存在しなかった場合（直近の過去を使う）
+                      else {
+                        // lower_boundは「未来」を指しているので、イテレータを1つ前に戻す(--)ことで
+                        // 「直近の過去(lower date)」を取得できる
+                        --it;
+                        double price = it->second;
+                        show_calc_result(target_date, price, parsed_result.value.value.ok_value);
+                      }
+
+                    }
+                    break;
+                  case Result<double, ValueParseError::ValueParseError>::Err:
+                    {
+                      std::cerr << "Error: failed to convert => " << priceStr << std::endl;
+                    }
+                    break;
+                }
+              } else {
+                // Failed to parse value
+                std::cerr << "Error: failed to parse data => " << line << std::endl;
+              }
+            }
+            break;
+          case Result<Date, FailedReason::FailedReason>::Err:
+            {
+              std::cerr << "Error: bad input => " << line << std::endl;
+            }
+            break;
+        }
+      } else {
+        // Failed to parse date
+        std::cerr << "Error: bad input => " << line << std::endl;
+      }
+    }
+  }
+  return true;
+}
+
 
 // errorの場合は1を返して終了
-int func() {
-  // std::string input = "2026-02-29";
-  std::string user_input = "";
-  std::string csv_database = 
-    // "date,exchange_rate\n"
-    "2016-09-05,603.95\n"
-    "2016-09-08,615.33\n"
-    "2016-09-11,621.65\n"
-    "2016-09-14,608.82\n"
-    "2016-09-17,607.04\n"
-    "2016-09-20,608.66\n"
-    "2016-09-23,594.08\n";
+int func(char *file_name) {
+  std::ifstream ifs("data.csv");
 
-  std::istringstream fileStream(csv_database);
+  if (!ifs.is_open()) {
+    // ファイルが開けなかった場合のエラーハンドリング
+    std::cerr << "Error: could not open database file. you have to set up data.csv" << std::endl;
+    return 1;
+  }
+  // 2. ファイルの内容を一気に ostringstream に流し込み、string に変換する
+  std::ostringstream csv_oss;
+  csv_oss << ifs.rdbuf(); // 内部バッファを直接繋いで一気にコピー（C++98最速手法）
+  std::string csv_content = csv_oss.str();
 
-  std::map<Date, double> csv_database_map;
+  ifs.close(); // 読み込み終わったのでファイルは閉じてOK
+
+  // 3. 取得した文字列から目的の istringstream を作成する
+  std::istringstream fileStream(csv_content);
+
+  std::ifstream user_ifs(file_name);
+  if (!user_ifs.is_open()) {
+    // ファイルが開けなかった場合のエラーハンドリング
+    std::cerr << "Error: could not open file." << std::endl;
+    return 1;
+  }
+  // 2. ファイルの内容を一気に ostringstream に流し込み、string に変換する
+  std::ostringstream user_oss;
+  user_oss << user_ifs.rdbuf(); // 内部バッファを直接繋いで一気にコピー（C++98最速手法）
+  std::string user_content = user_oss.str();
+
+  user_ifs.close(); // 読み込み終わったのでファイルは閉じてOK
+
+  // 3. 取得した文字列から目的の istringstream を作成する
+  std::istringstream userStream(user_content);
+
+  std::map<Date, double> csv_database_map; // ここcsvから読んだ内容を格納する
   if (!load_csv_data(fileStream, csv_database_map)) {
     return 1;
   }
 
-  Date target_date;
-  target_date.year = 2016;
-  target_date.month = 9;
-  target_date.day = 10;
-
-  std::map<Date, double>::iterator it = csv_database_map.lower_bound(target_date);
-
-  // パターンA: ピッタリ同じ日付が見つかった場合
-  // (itがendではなく、かつ、指しているキーが探している日付と完全に一致する)
-  if (it != csv_database_map.end() && it->first == target_date) {
-      double price = it->second;
-
-      std::cout << "founded data" << price << std::endl;
-  }
-  // パターンB: 指定された日付が、データベースの一番古い日付よりもさらに過去だった場合
-  // (lower_boundがmapの先頭を返してきた場合)
-  else if (it == csv_database_map.begin()) {
-      std::cerr << "Error: No older date found in database for => " 
-                /* << target_dateの文字列化など */ << std::endl;
-  }
-  // パターンC: 日付がピッタリ存在しなかった場合（直近の過去を使う）
-  else {
-      // lower_boundは「未来」を指しているので、イテレータを1つ前に戻す(--)ことで
-      // 「直近の過去(lower date)」を取得できる
-      --it;
-      double price = it->second;
-      // ... price を使って計算 ...
-      std::cout << "founded data" << price << std::endl;
-  }
-  // std::string input = "2026-04-30";
-
+  load_user_input_and_show_result(userStream, csv_database_map);
   return 0;
 }

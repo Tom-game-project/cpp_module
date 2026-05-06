@@ -311,6 +311,6 @@ EofParser<Iterator> eof_p() {
 
 // ============================= parser combinator ============================= (ここまで)
 
-int func();
+int func(char* file_name);
 
 #endif
