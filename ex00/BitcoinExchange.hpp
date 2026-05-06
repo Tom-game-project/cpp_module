@@ -2,7 +2,6 @@
 #define BITCOINEXCHANGE_HPP
 
 #include <utility>
-#include <map>
 #include <string>
 
 // ============================= parser combinator ============================= (ここから)
@@ -312,46 +311,6 @@ EofParser<Iterator> eof_p() {
 
 // ============================= parser combinator ============================= (ここまで)
 
-// typedef unsigned int YearT;  // 0000 - 9999
-// typedef unsigned int MonthT;
-// typedef unsigned int DayT;
-// 
-// template <typename T, typename E>
-// struct Result {
-//   enum {
-//     Ok,
-//     Err
-//   } ty;
-//   union {
-//     T ok_value;
-//     E err_value;
-//   } value;
-// };
-// 
-// struct Date {
-//   YearT year;
-//   MonthT month;
-//   DayT day;
-// 
-//   bool operator<(const Date& rhs) const;
-// };
-// 
-// namespace FailedReason {
-// enum FailedReason {
-//   BadInput
-// };
-// }
-// 
-// namespace ValueParseError {
-//   enum ValueParseError {
-//     StrtodErr // strtod error
-//   };
-// }
-
-// parser
-
-// dateを解釈するparser
-// ParseResult<std::string::const_iterator, Result<Date, FailedReason::FailedReason> > date_parser(std::string input);
-// ParseResult<std::string::const_iterator, Result<double, ValueParseError::ValueParseError> > value_parser(std::string input);
 int func();
+
 #endif

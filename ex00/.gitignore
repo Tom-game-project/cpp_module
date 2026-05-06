@@ -1,2 +1,4 @@
 btc
 *.o
+input.txt
+data.csv

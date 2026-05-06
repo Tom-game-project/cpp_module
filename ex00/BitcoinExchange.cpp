@@ -1,9 +1,13 @@
 #include <cerrno>
+#include <map>
+#include <ostream>
+#include <sstream>
 #include <string>
 #include <cstdlib>
 
 // debug
 #include <iostream>
+#include <utility>
 
 #include "BitcoinExchange.hpp"
 
@@ -37,6 +41,10 @@ struct Date {
     }
     return this->day < rhs.day;
   }
+
+  bool operator==(const Date& rhs) const {
+    return this->year == rhs.year && this->month == rhs.month && this->day == rhs.day;
+  }
 };
 
 namespace FailedReason {
@@ -52,7 +60,7 @@ namespace ValueParseError {
 }
 
 unsigned int interpret_char_as_int(char c) {
-  return c - '0';
+  return static_cast<unsigned int>(c - '0');
 }
 
 struct ToDate {
@@ -286,55 +294,136 @@ ParseResult<std::string::const_iterator, Result<double, ValueParseError::ValuePa
   return parsed_result;
 }
 
+// errorが起こったときにはfalseを返す
+bool load_csv_data(std::istringstream& user_input, std::map<Date, double>& r_map) {
+  std::string line;
+  // std::map<Date, double> r_map;
+
+  while (std::getline(user_input, line)) {
+
+    if (!line.empty() && line[line.length() - 1] == '\r') {
+      line.erase(line.length() - 1);
+    }
+
+    std::istringstream lineStream(line);
+    std::string dateStr, priceStr;
+
+    if (std::getline(lineStream, dateStr, ',')) {
+      std::getline(lineStream, priceStr);
+
+      ParseResult<std::string::const_iterator, Result<Date, FailedReason::FailedReason> > parsed_date = 
+        date_parser(dateStr);
+      ParseResult<std::string::const_iterator, Result<double, ValueParseError::ValueParseError> > parsed_result = 
+        value_parser(priceStr);
+
+      if (parsed_date.success) {
+        switch (parsed_date.value.ty) {
+          case Result<Date, FailedReason::FailedReason>::Ok:
+            {
+              Date date = parsed_date.value.value.ok_value;
+              // std::cout << date.year << "-" << date.month << "-" << date.day << std::endl;
+
+              if (parsed_result.success) {
+                switch (parsed_result.value.ty) {
+                  case Result<double, ValueParseError::ValueParseError>::Ok:
+                    {
+                      r_map.insert(std::make_pair(date, parsed_result.value.value.ok_value));
+                      // std::cout << "Success to conv:" << parsed_result.value.value.ok_value << std::endl;
+                    }
+                    break;
+                  case Result<double, ValueParseError::ValueParseError>::Err:
+                    {
+                      std::cerr << "load csv err: Failed to Convert" << std::endl;
+                      return false;
+                    }
+                    break;
+                }
+              } else {
+                // Failed to parse value
+                std::cerr << "load csv err: Failed to parse" << std::endl;
+                return false;
+              }
+            }
+            break;
+          case Result<Date, FailedReason::FailedReason>::Err:
+            {
+              // FailedReason::FailedReason fr = parsed_date.value.value.err_value;
+              // switch (fr) {
+              //   case FailedReason::BadInput:
+              //     {
+              //       std::cerr << "load csv err: BadInput" << std::endl;
+              //       return false;
+              //     }
+              //     break;
+              // }
+              std::cerr << "load csv err: BadInput" << std::endl;
+              return false;
+            }
+            break;
+        }
+      } else {
+        // Failed to parse date
+        std::cerr << "load csv err: failed to parse" << std::endl;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+#include <sstream>
+
+// errorの場合は1を返して終了
 int func() {
   // std::string input = "2026-02-29";
-  std::string input = "2026-04-27";
+  std::string user_input = "";
+  std::string csv_database = 
+    // "date,exchange_rate\n"
+    "2016-09-05,603.95\n"
+    "2016-09-08,615.33\n"
+    "2016-09-11,621.65\n"
+    "2016-09-14,608.82\n"
+    "2016-09-17,607.04\n"
+    "2016-09-20,608.66\n"
+    "2016-09-23,594.08\n";
 
-  ParseResult<std::string::const_iterator, Result<Date, FailedReason::FailedReason> > parsed_date = date_parser(input);
+  std::istringstream fileStream(csv_database);
 
-  if (parsed_date.success) {
-    switch (parsed_date.value.ty) {
-      case Result<Date, FailedReason::FailedReason>::Ok:
-        {
-          Date date = parsed_date.value.value.ok_value;
-          std::cout << date.year << "-" << date.month << "-" << date.day << std::endl;
-        }
-        break;
-      case Result<Date, FailedReason::FailedReason>::Err:
-        {
-          FailedReason::FailedReason fr = parsed_date.value.value.err_value;
-          switch (fr) {
-            case FailedReason::BadInput:
-              {
-                std::cout << "BadInput" << std::endl;
-              }
-              break;
-          }
-        }
-        break;
-    }
-  } else {
-    std::cout << "failed to parse" << std::endl;
+  std::map<Date, double> csv_database_map;
+  if (!load_csv_data(fileStream, csv_database_map)) {
+    return 1;
   }
 
-  std::string input1 = "\t-123.456    ";
-  ParseResult<std::string::const_iterator, Result<double, ValueParseError::ValueParseError> > parsed_result = value_parser(input1);
-  if (parsed_result.success) {
-    switch (parsed_result.value.ty) {
-      case Result<double, ValueParseError::ValueParseError>::Ok:
-        {
-          std::cout << "Success to conv:" << parsed_result.value.value.ok_value << std::endl;
-        }
-        break;
-      case Result<double, ValueParseError::ValueParseError>::Err:
-        {
-          std::cout << "Failed to Convert" << std::endl;
-        }
-        break;
-    }
-  } else {
-    std::cout << "Failed to parse" << std::endl;
+  Date target_date;
+  target_date.year = 2016;
+  target_date.month = 9;
+  target_date.day = 10;
+
+  std::map<Date, double>::iterator it = csv_database_map.lower_bound(target_date);
+
+  // パターンA: ピッタリ同じ日付が見つかった場合
+  // (itがendではなく、かつ、指しているキーが探している日付と完全に一致する)
+  if (it != csv_database_map.end() && it->first == target_date) {
+      double price = it->second;
+
+      std::cout << "founded data" << price << std::endl;
   }
+  // パターンB: 指定された日付が、データベースの一番古い日付よりもさらに過去だった場合
+  // (lower_boundがmapの先頭を返してきた場合)
+  else if (it == csv_database_map.begin()) {
+      std::cerr << "Error: No older date found in database for => " 
+                /* << target_dateの文字列化など */ << std::endl;
+  }
+  // パターンC: 日付がピッタリ存在しなかった場合（直近の過去を使う）
+  else {
+      // lower_boundは「未来」を指しているので、イテレータを1つ前に戻す(--)ことで
+      // 「直近の過去(lower date)」を取得できる
+      --it;
+      double price = it->second;
+      // ... price を使って計算 ...
+      std::cout << "founded data" << price << std::endl;
+  }
+  // std::string input = "2026-04-30";
 
   return 0;
 }
