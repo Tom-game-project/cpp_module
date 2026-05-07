@@ -1,4 +1,8 @@
 btc
 *.o
+*.d
 input.txt
+input1.txt
+out
+test
 data.csv

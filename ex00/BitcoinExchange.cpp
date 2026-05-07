@@ -7,7 +7,6 @@
 #include <iomanip>
 #include <fstream>
 
-// debug
 #include <iostream>
 #include <utility>
 
@@ -387,7 +386,7 @@ bool load_csv_data(std::istringstream& csv_stream, std::map<Date, double>& r_map
 
 void show_calc_result(Date& target_date, double rate, double price) {
   if (price < 0) {
-    std::cerr << "Error: not a positive number" << std::endl;
+    std::cerr << "Error: not a positive number." << std::endl;
   } else if (1000 < price) {
     // Error: too large a number
     std::cerr << "Error: too large a number" << std::endl;
@@ -483,43 +482,37 @@ bool load_user_input_and_show_result(std::istringstream& user_input_stream, std:
   return true;
 }
 
-
 // errorの場合は1を返して終了
 int func(char *file_name) {
   std::ifstream ifs("data.csv");
 
   if (!ifs.is_open()) {
-    // ファイルが開けなかった場合のエラーハンドリング
     std::cerr << "Error: could not open database file. you have to set up data.csv" << std::endl;
     return 1;
   }
-  // 2. ファイルの内容を一気に ostringstream に流し込み、string に変換する
+
   std::ostringstream csv_oss;
-  csv_oss << ifs.rdbuf(); // 内部バッファを直接繋いで一気にコピー（C++98最速手法）
+  csv_oss << ifs.rdbuf();
   std::string csv_content = csv_oss.str();
 
-  ifs.close(); // 読み込み終わったのでファイルは閉じてOK
+  ifs.close();
 
-  // 3. 取得した文字列から目的の istringstream を作成する
   std::istringstream fileStream(csv_content);
 
   std::ifstream user_ifs(file_name);
   if (!user_ifs.is_open()) {
-    // ファイルが開けなかった場合のエラーハンドリング
     std::cerr << "Error: could not open file." << std::endl;
     return 1;
   }
-  // 2. ファイルの内容を一気に ostringstream に流し込み、string に変換する
   std::ostringstream user_oss;
-  user_oss << user_ifs.rdbuf(); // 内部バッファを直接繋いで一気にコピー（C++98最速手法）
+  user_oss << user_ifs.rdbuf();
   std::string user_content = user_oss.str();
 
-  user_ifs.close(); // 読み込み終わったのでファイルは閉じてOK
+  user_ifs.close();
 
-  // 3. 取得した文字列から目的の istringstream を作成する
   std::istringstream userStream(user_content);
 
-  std::map<Date, double> csv_database_map; // ここcsvから読んだ内容を格納する
+  std::map<Date, double> csv_database_map; // ここでcsvから読んだ内容を格納する
   if (!load_csv_data(fileStream, csv_database_map)) {
     return 1;
   }
