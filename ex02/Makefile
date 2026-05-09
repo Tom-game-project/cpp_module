@@ -1,26 +1,27 @@
 .PHONY: all clean fclean re
 
 SRC= \
-	 PmergeMe.cpp
+	 PmergeMe.cpp \
+     main.cpp
 
 OBJ=$(SRC:.cpp=.o)
-
-MAIN=main.cpp
+DEP=$(SRC:.cpp=.d)
 
 NAME=PmergeMe
 
 CXX=c++
-CXX_FLAGS= -Wall -Wextra -Werror -Wconversion -std=c++98 -pedantic-errors
-
-
+DEP_FLAG= -MMD -MP
+CXX_FLAGS= -Wall -Wextra -Werror -Wconversion -std=c++98 -pedantic-errors \
+           -Wreorder -Wshadow -Wold-style-cast \
+           -Woverloaded-virtual -Wnon-virtual-dtor $(DEP_FLAG)
 
 all: $(NAME)
 
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) -c $< -o $@
 
-$(NAME): $(OBJ) $(MAIN)
-	$(CXX) $(CXX_FLAGS) $(OBJ) $(MAIN) -o $(NAME)
+$(NAME): $(OBJ)
+	$(CXX) $(CXX_FLAGS) $(OBJ) -o $(NAME)
 
 clean:
 	rm -f $(OBJ)
@@ -30,3 +31,4 @@ fclean: clean
 
 re: fclean all
 
+-include $(DEP)
