@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <utility>
 #include <vector>
+#include <deque>
 
 // 配列を直接渡すだけ
 // int pend = find_pend_value(my_pairs, 9);
@@ -49,7 +50,8 @@ int jacobster(int i) {
   }
 }
 
-std::vector<int> ford_johnson_sort(std::vector<int> v) 
+template <typename Container>
+Container ford_johnson_sort(Container v) 
 {
   if (v.size() <= 1) {
     return v;
@@ -61,20 +63,20 @@ std::vector<int> ford_johnson_sort(std::vector<int> v)
 
   build_pairs(v, pairs, straggler);
 
-  std::vector<int> main_chain;
+  Container main_chain;
   for (size_t i = 0; i < pairs.size(); ++i) {
     main_chain.push_back(pairs[i].first);
   }
 
-  std::vector<int> sorted_main = ford_johnson_sort(main_chain);
+  Container sorted_main = ford_johnson_sort(main_chain);
 
-  std::vector<int> pend;
+  Container pend;
   for (size_t i = 0; i < sorted_main.size(); ++i) {
     int partner = find_pend_value(pairs, sorted_main[i]);
     pend.push_back(partner);
   }
 
-  std::vector<int> paired_main = sorted_main;
+  Container paired_main = sorted_main;
 
   if (!pend.empty()) {
     sorted_main.insert(sorted_main.begin(), pend[0]);
@@ -92,9 +94,9 @@ std::vector<int> ford_johnson_sort(std::vector<int> v)
       int target = pend[static_cast<std::size_t>(i)];
       int partner_val = paired_main[static_cast<std::size_t>(i)];
 
-      std::vector<int>::iterator partner_it = std::find(sorted_main.begin(), sorted_main.end(), partner_val);
+      typename Container::iterator partner_it = std::find(sorted_main.begin(), sorted_main.end(), partner_val);
 
-      std::vector<int>::iterator insert_pos = std::lower_bound(sorted_main.begin(), partner_it, target);
+      typename Container::iterator insert_pos = std::lower_bound(sorted_main.begin(), partner_it, target);
 
       sorted_main.insert(insert_pos, target);
     }
@@ -104,9 +106,12 @@ std::vector<int> ford_johnson_sort(std::vector<int> v)
   }
 
   if (has_straggler) {
-    std::vector<int>::iterator pos = std::lower_bound(sorted_main.begin(), sorted_main.end(), straggler);
+    typename Container::iterator pos = std::lower_bound(sorted_main.begin(), sorted_main.end(), straggler);
     sorted_main.insert(pos, straggler);
   }
 
   return sorted_main;
 }
+
+template std::vector<int> ford_johnson_sort<std::vector<int> >(std::vector<int>);
+template std::deque<int> ford_johnson_sort<std::deque<int> >(std::deque<int>);
