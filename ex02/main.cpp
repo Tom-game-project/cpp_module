@@ -38,7 +38,21 @@ int parse_positive_integer(const std::string& str) {
 }
 
 // 実験手順
+//
+// 必要なファイルを過去のコミットから持ってくる
+// ```sh
+// git show d6a4192:ex02/a.py > a.py
+// git show d6a4192:ex02/model.py > model.py
+// ```
+//
+// 3000個の要素に関してテストする
+// ```
 // bash -c './PmergeMe $(python3 a.py)'
+// ```
+//
+// ```
+// python3 model.py
+// ```
 
 int main(int argc, char** argv) {
   // vector
